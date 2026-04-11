@@ -9,6 +9,11 @@
     4. Liste les disques avec leurs details materiels
     5. Analyse les IO > 10000ms via awk
     6. Exporte tout dans EVC_Export sur le bureau
+.NOTES
+    Auteur : ps81frt
+    Lien   : https://github.com/ps81frt/EVC
+.LICENSE
+    MIT
 #>
 
 param(
