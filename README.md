@@ -1,7 +1,20 @@
 # EVCDiag
 
-### 
+## Utilisation rapide
 
+- Ouvrir PowerShell en tant qu’administrateur
+- Débloquer le script si nécessaire :
+  ```powershell
+  Unblock-File .\EVCDiag.ps1
+  ```
+- Autoriser l’exécution temporaire si la politique l’empêche :
+  ```powershell
+  Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+  ```
+- Exécuter le script :
+  ```powershell
+  .\EVCDiag.ps1 -Help
+  ```
 `EVCDiag.ps1` collecte des diagnostics Windows orientés stockage et kernel.
 Le script exporte un jeu de fichiers dans `EVC_Export` contenant :
 
