@@ -241,3 +241,24 @@ Write-Host "2. $systemCrashFile`n" -
 Write-Host "3. $kernelDiagFile`n" -
 Write-Host "4. $diskInfoFile`n" -
 Write-Host "Les fichiers Notepad sont ouverts." -ForegroundColor Green
+
+<# 
+
+TROUVER BLOBK BUCKET ++ 10000ms + 
+
+awk '
+/^TimeCreated :/ { bloc = $0; getline; while ($0 !~ /^TimeCreated :/ && !/^$/) { bloc = bloc "\n" $0; getline } }
+bloc ~ /IO success counts are/ {
+    match(bloc, /IO success counts are [0-9, ]+\./)
+    line = substr(bloc, RSTART, RLENGTH)
+    gsub(/[^0-9,]/, "", line)
+    split(line, valeurs, ",")
+    if (valeurs[13] != 0 || valeurs[14] != 0) {
+        match(bloc, /TimeCreated : [0-9\/: ]+/); date = substr(bloc, RSTART, RLENGTH)
+        match(bloc, /Guid is \{([^}]+)\}/); guid = substr(bloc, RSTART+9, RLENGTH-10)
+        print date, guid, "->", valeurs[13], "IO en 10000 ms,", valeurs[14], "IO en 10000+ ms"
+    }
+}
+' 3_Kernel_Diagnostics.txt
+
+#>
