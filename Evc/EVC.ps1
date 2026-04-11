@@ -244,7 +244,7 @@ Write-Host "Les fichiers Notepad sont ouverts." -ForegroundColor Green
 
 <# 
 
-TROUVER BLOBK BUCKET ++ 10000ms + 
+.TROUVER BLOBK BUCKET ++ 10000ms + 
 
 awk '
 /^TimeCreated :/ { bloc = $0; getline; while ($0 !~ /^TimeCreated :/ && !/^$/) { bloc = bloc "\n" $0; getline } }
