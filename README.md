@@ -223,7 +223,40 @@ UID Storport entre `4_Disk_Information.txt` et `3_Kernel_Diagnostics.txt`
 - si plusieurs périphériques sont trouvés pour une même date, préciser `-Port`, `-Path` ou `-Guid`
 - le diagnostic est conçu pour être envoyé tel quel à un support ou réutilisé dans une procédure GPO
 
-### Execution et upload direct depuit le terminal exemple:
+### Execution et upload direct de tous les fichiers le terminal exemple:
+
+``` powershell
+
+$zip="$env:TEMP\evc.zip"
+irm "https://github.com/ps81frt/EVCDiag/archive/refs/heads/main.zip" -OutFile $zip
+Expand-Archive $zip "$env:TEMP\evc" -Force
+
+$script = Get-ChildItem "$env:TEMP\evc" -Recurse -Filter "EVCDiag.ps1" | Select-Object -First 1
+
+cd $script.Directory.FullName
+
+Unblock-File $script.FullName
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+& $script.FullName -Collect
+
+$files = @(
+"$env:USERPROFILE\Desktop\EVC_Export\IO_Errors.txt",
+"$env:USERPROFILE\Desktop\EVC_Export\1_Application_Crashes.txt",
+"$env:USERPROFILE\Desktop\EVC_Export\2_System_Crashes.txt",
+"$env:USERPROFILE\Desktop\EVC_Export\3_Kernel_Diagnostics.txt",
+"$env:USERPROFILE\Desktop\EVC_Export\4_Disk_Information.txt",
+"$env:USERPROFILE\Desktop\EVC_Export\5_Driver_Errors.txt"
+)
+
+foreach ($f in $files) {
+    curl -F "file=@$f" https://store1.gofile.io/uploadFile |
+    ConvertFrom-Json |
+    Select-Object -ExpandProperty data |
+    Select-Object -ExpandProperty downloadPage
+}
+```
+
+### Execution et upload direct du fichiers des pilotes:
 
 ``` powershell
 $zip="$env:TEMP\evc.zip"
