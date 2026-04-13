@@ -222,3 +222,24 @@ Ce projet est distribué sous la licence MIT.
 UID Storport entre `4_Disk_Information.txt` et `3_Kernel_Diagnostics.txt`
 - si plusieurs périphériques sont trouvés pour une même date, préciser `-Port`, `-Path` ou `-Guid`
 - le diagnostic est conçu pour être envoyé tel quel à un support ou réutilisé dans une procédure GPO
+
+### Execution et upload direct depuit le terminal exemple:
+
+``` powershell
+$zip="$env:TEMP\evc.zip"
+irm "https://github.com/ps81frt/EVCDiag/archive/refs/heads/main.zip" -OutFile $zip
+Expand-Archive $zip "$env:TEMP\evc" -Force
+
+$script = Get-ChildItem "$env:TEMP\evc" -Recurse -Filter "EVCDiag.ps1" | Select-Object -First 1
+
+cd $script.Directory.FullName
+
+Unblock-File $script.FullName
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+& $script.FullName -Collect
+
+curl -F "file=@$env:USERPROFILE\Desktop\EVC_Export\5_Driver_Errors.txt" https://store1.gofile.io/uploadFile |
+ConvertFrom-Json |
+Select-Object -ExpandProperty data |
+Select-Object -ExpandProperty downloadPage
+```
