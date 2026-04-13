@@ -8,7 +8,8 @@
     3. Collecte les logs kernel (WHEA, Dump, Storport, etc.)
     4. Liste les disques avec leurs details materiels
     5. Analyse les IO > 10000ms via awk
-    6. Exporte tout dans EVC_Export sur le bureau
+    6. Collecte les erreurs de drivers (Event ID 219, 7000, 7001, 7011, 7026 + journaux DriverFrameworks)
+    7. Exporte tout dans EVC_Export sur le bureau
 .NOTES
     Auteur : ps81frt
     Lien   : https://github.com/ps81frt/EVC
@@ -382,7 +383,37 @@ if ($Collect) {
     }
 
     # =============================================
-    # 5. IO ERRORS AUTO
+    # 5. ERREURS DE DRIVERS
+    # =============================================
+    $driverErrorFile = Join-Path $outputFolder "5_Driver_Errors.txt"
+    "===== ERREURS DE DRIVERS (Event ID 219, 7000, 7001, 7011, 7026) =====" | Out-File $driverErrorFile -Encoding UTF8
+
+    Get-WinEvent -LogName "System" | Where-Object {$_.Id -in @(219,7000,7001,7011,7026)} | Sort-Object TimeCreated |
+        Select-Object TimeCreated, Id, @{N="Message";E={$_.Message}} |
+        Format-List | Out-File $driverErrorFile -Append -Encoding UTF8
+
+    $driverLogs = @(
+        "Microsoft-Windows-DriverFrameworks-UserMode/Operational",
+        "Microsoft-Windows-DriverFrameworks-KernelMode/Operational",
+        "Microsoft-Windows-Kernel-PnP/Configuration",
+        "Microsoft-Windows-DeviceSetupManager/Admin",
+        "Microsoft-Windows-DeviceSetupManager/Operational"
+    )
+
+    "`n===== JOURNAUX DRIVERFRAMEWORKS ET PNP =====" | Out-File $driverErrorFile -Append -Encoding UTF8
+    foreach ($logName in $driverLogs) {
+        try {
+            Get-WinEvent -LogName $logName -ErrorAction Stop | Sort-Object TimeCreated |
+                Select-Object TimeCreated, LogName, @{N="Message";E={$_.Message}} |
+                Format-List | Out-File $driverErrorFile -Append -Encoding UTF8
+        }
+        catch {
+            Write-Warning "Impossible de lire $logName : $_"
+        }
+    }
+
+    # =============================================
+    # 6. IO ERRORS AUTO
     # =============================================
     $ioErrorsFile = Join-Path $outputFolder "IO_Errors.txt"
     Write-Host ""
@@ -390,12 +421,13 @@ if ($Collect) {
     Invoke-ListErrors $kernelDiagFile
 
     # =============================================
-    # 6. OUVERTURE DES FICHIERS GENERES
+    # 7. OUVERTURE DES FICHIERS GENERES
     # =============================================
     notepad $appCrashFile
     notepad $systemCrashFile
     notepad $kernelDiagFile
     notepad $diskInfoFile
+    notepad $driverErrorFile
     if (Test-Path $ioErrorsFile) { notepad $ioErrorsFile }
 
     Write-Host "Diagnostics generes dans : $outputFolder`n" -ForegroundColor Green
@@ -403,7 +435,8 @@ if ($Collect) {
     Write-Host "2. $systemCrashFile"
     Write-Host "3. $kernelDiagFile"
     Write-Host "4. $diskInfoFile"
-    Write-Host "5. $ioErrorsFile"
+    Write-Host "5. $driverErrorFile"
+    Write-Host "6. $ioErrorsFile"
 
     exit
 }
