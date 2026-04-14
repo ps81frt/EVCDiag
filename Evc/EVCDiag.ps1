@@ -195,8 +195,8 @@ if ($Collect) {
     # 2. ERREURS SYSTEME CRITIQUES
     # =============================================
     $systemCrashFile = Join-Path $outputFolder "2_System_Crashes.txt"
-    "===== ERREURS SYSTEME (ID 41, 1001, 7023, 7034, 157, 153) =====" | Out-File $systemCrashFile -Encoding UTF8
-    Get-WinEvent -LogName "System" | Where-Object {$_.Id -in @(41,1001,7023,7034,157,153)} | Sort-Object TimeCreated |
+    "===== ERREURS SYSTEME @(41,1001,7023,7034,157,153,7000,7001,7009,7011,7026,7045) =====" | Out-File $systemCrashFile -Encoding UTF8
+    Get-WinEvent -LogName "System" | Where-Object {$_.Id -in @(41,1001,7023,7034,157,153,7000,7001,7009,7011,7026,7045)} | Sort-Object TimeCreated |
         Select-Object TimeCreated, Id, @{N="Message";E={$_.Message}} |
         Format-List | Out-File $systemCrashFile -Append -Encoding UTF8
 
@@ -413,6 +413,60 @@ if ($Collect) {
     }
 
     # =============================================
+    # 5_1. DRIVER LOGS - setupapi (10 derniers jours)
+    # =============================================
+    $driverLogFile = Join-Path $outputFolder "5_1_Driver_Logs.txt"
+    $setupApiLogs  = @(
+        "C:\Windows\INF\setupapi.dev.log",
+        "C:\Windows\INF\setupapi.setup.log"
+    )
+    $cutoff = (Get-Date).AddDays(-10)
+
+    "===== DRIVER LOGS - setupapi (10 derniers jours) =====" | Out-File $driverLogFile -Encoding UTF8
+    "Filtre : depuis $cutoff"                                | Out-File $driverLogFile -Append -Encoding UTF8
+    "`n"                                                     | Out-File $driverLogFile -Append -Encoding UTF8
+
+    foreach ($setupApiLog in $setupApiLogs) {
+
+        "--- $setupApiLog ---" | Out-File $driverLogFile -Append -Encoding UTF8
+
+        if (Test-Path $setupApiLog) {
+            $lines         = Get-Content $setupApiLog -Encoding UTF8
+            $inSection     = $false
+            $sectionBuf    = @()
+            $pendingHeader = $null
+
+            foreach ($line in $lines) {
+                if ($line -match "^>>>\s+\[.+\]\s*$") {
+                    if ($inSection -and $sectionBuf.Count -gt 0) {
+                        $sectionBuf | Out-File $driverLogFile -Append -Encoding UTF8
+                    }
+                    $inSection     = $false
+                    $sectionBuf    = @()
+                    $pendingHeader = $line
+                } elseif ($pendingHeader -and $line -match ">>>\s+Section start\s+(\d{4}/\d{2}/\d{2}\s+\d{2}:\d{2}:\d{2})") {
+                    try {
+                        $ts        = [datetime]::ParseExact($matches[1], "yyyy/MM/dd HH:mm:ss", $null)
+                        $inSection = ($ts -ge $cutoff)
+                    } catch {
+                        $inSection = $false
+                    }
+                    $sectionBuf    = @($pendingHeader, $line)
+                    $pendingHeader = $null
+                } elseif ($inSection) {
+                    $sectionBuf += $line
+                }
+            }
+            if ($inSection -and $sectionBuf.Count -gt 0) {
+                $sectionBuf | Out-File $driverLogFile -Append -Encoding UTF8
+            }
+            Write-Host "[OK] $setupApiLog -> $driverLogFile" -ForegroundColor Green
+        } else {
+            "[WARN] $setupApiLog introuvable." | Out-File $driverLogFile -Append -Encoding UTF8
+            Write-Host "[WARN] $setupApiLog introuvable." -ForegroundColor Yellow
+        }
+    }
+    # =============================================
     # 6. IO ERRORS AUTO
     # =============================================
     $ioErrorsFile = Join-Path $outputFolder "IO_Errors.txt"
@@ -428,7 +482,9 @@ if ($Collect) {
     notepad $kernelDiagFile
     notepad $diskInfoFile
     notepad $driverErrorFile
+    if (Test-Path $driverLogFile) { notepad $driverLogFile }
     if (Test-Path $ioErrorsFile) { notepad $ioErrorsFile }
+    
 
     Write-Host "Diagnostics generes dans : $outputFolder`n" -ForegroundColor Green
     Write-Host "1. $appCrashFile"
@@ -436,6 +492,7 @@ if ($Collect) {
     Write-Host "3. $kernelDiagFile"
     Write-Host "4. $diskInfoFile"
     Write-Host "5. $driverErrorFile"
+    Write-Host "5_1. $driverLogFile"
     Write-Host "6. $ioErrorsFile"
 
     exit
