@@ -227,6 +227,7 @@ UID Storport entre `4_Disk_Information.txt` et `3_Kernel_Diagnostics.txt`
 
 ``` powershell
 
+
 $zip="$env:TEMP\evc.zip"
 irm "https://github.com/ps81frt/EVCDiag/archive/refs/heads/main.zip" -OutFile $zip
 Expand-Archive $zip "$env:TEMP\evc" -Force
@@ -240,12 +241,14 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 & $script.FullName -Collect
 
 $files = @(
-"$env:USERPROFILE\Desktop\EVC_Export\IO_Errors.txt",
+
 "$env:USERPROFILE\Desktop\EVC_Export\1_Application_Crashes.txt",
 "$env:USERPROFILE\Desktop\EVC_Export\2_System_Crashes.txt",
 "$env:USERPROFILE\Desktop\EVC_Export\3_Kernel_Diagnostics.txt",
 "$env:USERPROFILE\Desktop\EVC_Export\4_Disk_Information.txt",
 "$env:USERPROFILE\Desktop\EVC_Export\5_Driver_Errors.txt"
+"$env:USERPROFILE\Desktop\EVC_Export\5_1_Driver_Logs.txt"
+"$env:USERPROFILE\Desktop\EVC_Export\IO_Errors.txt",
 )
 
 foreach ($f in $files) {
