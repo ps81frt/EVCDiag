@@ -245,7 +245,7 @@ $files = @(
 "$env:USERPROFILE\Desktop\EVC_Export\2_System_Crashes.txt",
 "$env:USERPROFILE\Desktop\EVC_Export\3_Kernel_Diagnostics.txt",
 "$env:USERPROFILE\Desktop\EVC_Export\4_Disk_Information.txt",
-"$env:USERPROFILE\Desktop\EVC_Export\5_Driver\_Errors.txt",
+"$env:USERPROFILE\Desktop\EVC_Export\5_Driver_Errors.txt",
 "$env:USERPROFILE\Desktop\EVC_Export\5_1_Driver_Logs.txt",
 "$env:USERPROFILE\Desktop\EVC_Export\IO_Errors.txt"
 )
