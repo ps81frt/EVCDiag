@@ -245,9 +245,9 @@ $files = @(
 "$env:USERPROFILE\Desktop\EVC\_Export\2\_System\_Crashes.txt",
 "$env:USERPROFILE\Desktop\EVC\_Export\3\_Kernel\_Diagnostics.txt",
 "$env:USERPROFILE\Desktop\EVC\_Export\4\_Disk\_Information.txt",
-"$env:USERPROFILE\Desktop\EVC\_Export\5\_Driver\_Errors.txt"
-"$env:USERPROFILE\Desktop\EVC\_Export\5_1_Driver\_Logs.txt"
-"$env:USERPROFILE\Desktop\EVC\_Export\IO_Errors.txt",
+"$env:USERPROFILE\Desktop\EVC\_Export\5\_Driver\_Errors.txt",
+"$env:USERPROFILE\Desktop\EVC\_Export\5_1_Driver\_Logs.txt",
+"$env:USERPROFILE\Desktop\EVC\_Export\IO_Errors.txt"
 )
 
 foreach ($f in $files) {
