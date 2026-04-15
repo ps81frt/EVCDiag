@@ -241,13 +241,13 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
 $files = @(
 
-"$env:USERPROFILE\Desktop\EVC\_Export\1\_Application\_Crashes.txt",
-"$env:USERPROFILE\Desktop\EVC\_Export\2\_System\_Crashes.txt",
-"$env:USERPROFILE\Desktop\EVC\_Export\3\_Kernel\_Diagnostics.txt",
-"$env:USERPROFILE\Desktop\EVC\_Export\4\_Disk\_Information.txt",
-"$env:USERPROFILE\Desktop\EVC\_Export\5\_Driver\_Errors.txt",
-"$env:USERPROFILE\Desktop\EVC\_Export\5_1_Driver\_Logs.txt",
-"$env:USERPROFILE\Desktop\EVC\_Export\IO_Errors.txt"
+"$env:USERPROFILE\Desktop\EVC_Export\1_Application\_Crashes.txt",
+"$env:USERPROFILE\Desktop\EVC_Export\2_System\_Crashes.txt",
+"$env:USERPROFILE\Desktop\EVC_Export\3_Kernel\_Diagnostics.txt",
+"$env:USERPROFILE\Desktop\EVC_Export\4_Disk\_Information.txt",
+"$env:USERPROFILE\Desktop\EVC_Export\5_Driver\_Errors.txt",
+"$env:USERPROFILE\Desktop\EVC_Export\5_1_Driver\_Logs.txt",
+"$env:USERPROFILE\Desktop\EVC_Export\IO_Errors.txt"
 )
 
 foreach ($f in $files) {
