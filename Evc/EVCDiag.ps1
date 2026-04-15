@@ -243,7 +243,7 @@ if ($Collect) {
     $volumes     = Get-Volume | Where-Object { $_.DriveLetter } | Select-Object DiskNumber, DriveLetter
 
     $diskInfo = foreach ($disk in $physDisks) {
-        $rel = $reliability | Where-Object { $_.DeviceId -eq $disk.DeviceId }
+        $rel = $reliability | Where-Object { $_.DeviceId -eq $disk.DeviceId } | Select-Object -First 1
 
         $objectId = if ($rel) { $rel.UniqueId } else { "N/A" }
 
@@ -282,7 +282,15 @@ if ($Collect) {
         }
     }
 
-    $diskInfo | Format-List | Out-File $diskInfoFile -Append -Encoding UTF8
+    # --- TABLE 1 : Vue générale ---
+    "`n--- Vue generale ---" | Out-File $diskInfoFile -Append -Encoding UTF8
+    $diskInfo | Select-Object DiskNumber, DriveLetter, Name, BusType, SizeGB, HealthStatus, Temperature_C, WearPercent |
+        Format-Table -AutoSize | Out-File $diskInfoFile -Append -Encoding UTF8
+
+    # --- TABLE 2 : SMART / Erreurs / IDs ---
+    "`n--- SMART / Erreurs / IDs ---" | Out-File $diskInfoFile -Append -Encoding UTF8
+    $diskInfo | Select-Object DiskNumber, SerialNumber, ReadErrorsUncorrected, WriteErrorsUncorrected, ReadLatencyMax_ms, WriteLatencyMax_ms, StorportGuid, ObjectId |
+        Format-Table -AutoSize | Out-File $diskInfoFile -Append -Encoding UTF8
 
     # =============================================
     # 4.1. MAP DISK -> VOLUMES (via GUID)
@@ -304,22 +312,35 @@ if ($Collect) {
             }
         }
 
-        $driveNumber      = $disk.DeviceId
+        $driveNumber       = $disk.DeviceId
         $physicalDrivePath = "\\.\PhysicalDrive$driveNumber"
 
         $diskPartitions = $partitions | Where-Object { $_.DiskNumber -eq $driveNumber }
         $volumesOnDisk  = @()
         foreach ($part in $diskPartitions) {
-            $vol = $volumes | Where-Object { $_.Partition -and $_.Partition.DiskNumber -eq $driveNumber -and $_.Partition.PartitionNumber -eq $part.PartitionNumber }
+            $vol = $volumes | Where-Object {
+                $_.Partition -and
+                $_.Partition.DiskNumber      -eq $driveNumber -and
+                $_.Partition.PartitionNumber -eq $part.PartitionNumber
+            } | Select-Object -First 1
+
             if (-not $vol) {
-                $vol = $volumes | Where-Object { $_.UniqueId -like "*$($part.Guid)*" }
+                $vol = $volumes | Where-Object {
+                    $_.UniqueId -like "*$($part.Guid)*"
+                } | Select-Object -First 1
             }
+
             if ($vol) {
+                $letter = if ($vol.DriveLetter) { "$($vol.DriveLetter):" } else { "Aucune" }
+                $guid   = if ($vol.UniqueId)    { $vol.UniqueId -replace '.*\\','' } else { "N/A" }
+                $size   = if ($vol.Size -and $vol.Size -gt 0) { [math]::Round($vol.Size / 1GB, 2) } else { 0 }
+                $fs     = if ($vol.FileSystem)  { $vol.FileSystem } else { "?" }
+
                 $volumesOnDisk += [PSCustomObject]@{
-                    DriveLetter = if ($vol.DriveLetter) { "$($vol.DriveLetter):" } else { "Aucune" }
-                    VolumeGuid  = ($vol.UniqueId -replace '.*\\','')
-                    SizeGB      = [math]::Round($vol.Size / 1GB, 2)
-                    FileSystem  = $vol.FileSystem
+                    DriveLetter = $letter
+                    VolumeGuid  = $guid
+                    SizeGB      = $size
+                    FileSystem  = $fs
                 }
             }
         }
@@ -341,6 +362,54 @@ if ($Collect) {
         $volumesOnDisk | Format-Table DriveLetter, VolumeGuid, SizeGB, FileSystem -AutoSize | Out-File $diskInfoFile -Append -Encoding UTF8
     }
 
+    # =============================================
+    # 4.2. DF : ESPACE DISQUE PAR LECTEUR
+    # =============================================
+    "`n===== DF : ESPACE DISQUE PAR LECTEUR =====" | Out-File $diskInfoFile -Append -Encoding UTF8
+    Get-PSDrive -PSProvider FileSystem |
+        Select-Object Name,
+            @{N='Used(GB)'; E={[math]::Round($_.Used/1GB,2)}},
+            @{N='Free(GB)'; E={[math]::Round($_.Free/1GB,2)}} |
+        Format-Table -AutoSize | Out-File $diskInfoFile -Append -Encoding UTF8
+
+    # =============================================
+    # 4.3. BLKID-FULL : PARTITIONS + UUID + FS + SMART
+    # =============================================
+    "`n===== BLKID-FULL : PARTITIONS + UUID + FS =====" | Out-File $diskInfoFile -Append -Encoding UTF8
+    $physDisks | ForEach-Object {
+        $d   = $_
+        $rel = $reliability | Where-Object { $_.DeviceId -eq $d.DeviceId }
+        Get-Partition -DiskNumber $d.DeviceId -ErrorAction SilentlyContinue | ForEach-Object {
+            $p = $_
+            $v = Get-Volume -Partition $p -ErrorAction SilentlyContinue | Select-Object -First 1
+            [PSCustomObject]@{
+                Disk       = $d.FriendlyName
+                PartNum    = $p.PartitionNumber
+                'Size(GB)' = [math]::Round($p.Size / 1GB, 2)
+                FS         = if     ($p.Type -eq 'System')   { 'EFI (FAT32)' }
+                             elseif ($p.Type -eq 'Reserved') { 'MSR' }
+                             elseif ($v -and $v.FileSystemType) { $v.FileSystemType }
+                             else                            { '?' }
+                Type       = $p.Type
+                PartGuid   = $p.Guid
+                UUID       = if ($v) { $v.UniqueId } else { "N/A" }
+            }
+        }
+    } | Format-Table -AutoSize | Out-String -Width 10000 | Out-File $diskInfoFile -Append -Encoding UTF8
+
+    # =============================================
+    # 4.4. LSBLK
+    # =============================================
+    "`n===== LSBLK =====" | Out-File $diskInfoFile -Append -Encoding UTF8
+    if (Get-Command lsblk.exe -ErrorAction SilentlyContinue) {
+        lsblk.exe | Out-File $diskInfoFile -Append -Encoding UTF8
+    } else {
+        "lsblk.exe non disponible sur cette machine." | Out-File $diskInfoFile -Append -Encoding UTF8
+    }
+
+    # =============================================
+    # 4.5. IDENTIFICATION DISQUE(S) DEFAILLANT(S)
+    # =============================================
     $candidateDisks = $diskInfo | Where-Object { $_.ReadErrorsUncorrected -gt 0 -or $_.WriteErrorsUncorrected -gt 0 }
     if (-not $candidateDisks) {
         $candidateDisks = $diskInfo | Where-Object { $_.ReadLatencyMax_ms -ge 100 -or $_.WriteLatencyMax_ms -ge 100 }
@@ -369,7 +438,8 @@ if ($Collect) {
     $problematic = $diskInfo | Where-Object { $_.ReadErrorsUncorrected -gt 0 -or $_.WriteErrorsUncorrected -gt 0 }
     if ($problematic) {
         "`n===== DISQUES AVEC ERREURS NON CORRIGEES =====" | Out-File $diskInfoFile -Append -Encoding UTF8
-        $problematic | Format-List DiskNumber, DriveLetter, Name, ReadErrorsUncorrected, WriteErrorsUncorrected, ReadLatencyMax_ms, ObjectId, StorportGuid | Out-File $diskInfoFile -Append -Encoding UTF8
+        $problematic | Select-Object DiskNumber, DriveLetter, Name, ReadErrorsUncorrected, WriteErrorsUncorrected, ReadLatencyMax_ms, ObjectId, StorportGuid |
+        Out-String -Width 10000 | Format-Table -AutoSize | Out-File $diskInfoFile -Append -Encoding UTF8
     } else {
         "`n===== AUCUN DISQUE AVEC ERREURS DETECTEES =====" | Out-File $diskInfoFile -Append -Encoding UTF8
     }
@@ -377,7 +447,7 @@ if ($Collect) {
     Write-Host ""
     if ($problematic) {
         Write-Host "⚠️  Disques avec erreurs non corrigees :" -ForegroundColor Red
-        $problematic | Format-List DiskNumber, DriveLetter, Name, ReadErrorsUncorrected, StorportGuid, ObjectId
+        $problematic | Format-Table -AutoSize DiskNumber, DriveLetter, Name, ReadErrorsUncorrected, StorportGuid, ObjectId
     } else {
         Write-Host "✅ Aucun disque avec erreurs non corrigees detecte." -ForegroundColor Green
     }
