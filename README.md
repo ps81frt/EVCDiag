@@ -227,6 +227,7 @@ UID Storport entre `4_Disk_Information.txt` et `3_Kernel_Diagnostics.txt`
 
 ``` powershell
 
+&{
 $zip="$env:TEMP\evc.zip"
 irm "https://github.com/ps81frt/EVCDiag/archive/refs/heads/main.zip" -OutFile $zip
 Expand-Archive $zip "$env:TEMP\evc" -Force
@@ -240,7 +241,6 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 & $script.FullName -Collect
 
 $files = @(
-
 "$env:USERPROFILE\Desktop\EVC_Export\1_Application_Crashes.txt",
 "$env:USERPROFILE\Desktop\EVC_Export\2_System_Crashes.txt",
 "$env:USERPROFILE\Desktop\EVC_Export\3_Kernel_Diagnostics.txt",
@@ -250,11 +250,35 @@ $files = @(
 "$env:USERPROFILE\Desktop\EVC_Export\IO_Errors.txt"
 )
 
-foreach ($f in $files) {
-    curl -F "file=@$f" https://store1.gofile.io/uploadFile |
-    ConvertFrom-Json |
-    Select-Object -ExpandProperty data |
-    Select-Object -ExpandProperty downloadPage
+$links=@()
+$i=1
+
+foreach($file in $files){
+if(Test-Path $file){
+$url=curl -F "file=@$file" https://store1.gofile.io/uploadFile |
+ConvertFrom-Json |
+Select-Object -ExpandProperty data |
+Select-Object -ExpandProperty downloadPage
+
+$name=Split-Path $file -Leaf
+$entry="{0}. {1} -> {2}" -f $i,$name,$url
+
+$links+=$entry
+Write-Host $entry
+
+$i++
+}else{
+Write-Warning "Ignoré : $file"
+}
+}
+
+Write-Host "`n=== Récap liens ===" -ForegroundColor Cyan
+$links | ForEach-Object { Write-Host $_ -ForegroundColor Yellow }
+
+$out="$env:USERPROFILE\Desktop\EVC_Export\liens_upload.txt"
+$links | Out-File $out -Encoding UTF8
+
+Write-Host "`n$out"
 }
 ```
 
