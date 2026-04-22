@@ -73,7 +73,7 @@ Ouvrir **PowerShell en tant qu'administrateur** puis coller — télécharge, ex
     $t = 0
     do { Start-Sleep -Seconds 2; $t += 2 } while ((Get-ChildItem $dst -Recurse).Count -eq 0 -and $t -lt 60)
 
-    $script = Get-ChildItem $dst -Recurse -Filter "EVCDiag.ps1" | Select-Object -First 1
+    $script = Get-ChildItem $dst -Recurse -Filter "EVCDiag_Win7.ps1" | Select-Object -First 1
     Set-Location $script.Directory.FullName
     Unblock-File $script.FullName
     Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
