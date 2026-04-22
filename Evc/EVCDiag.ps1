@@ -72,7 +72,7 @@ function Install-Awk {
 
     Write-Host "[INFO] awk non trouve. Telechargement depuis GitHub..."
 
-    $zipUrl = "https://github.com/ps81frt/EVC/raw/main/Evc/LinuxToolOn-Windows.zip"
+    $zipUrl = "https://github.com/ps81frt/LinuxToolsOnWindows/releases/download/1.0/LinuxToolOn-Windows.zip"
     $tmpZip = Join-Path $env:TEMP "LinuxToolOn-Windows.zip"
     $tmpDir = Join-Path $env:TEMP "LinuxTools_EVC"
 
