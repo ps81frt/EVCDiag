@@ -73,7 +73,7 @@ Ouvrir **PowerShell en tant qu'administrateur** puis coller — télécharge, ex
     $t = 0
     do { Start-Sleep -Seconds 2; $t += 2 } while ((Get-ChildItem $dst -Recurse).Count -eq 0 -and $t -lt 60)
 
-    $script = Get-ChildItem $dst -Recurse -Filter "EVCDiag_Win7.ps1" | Select-Object -First 1
+    $script = Get-ChildItem $dst -Recurse -Filter "EVCDiag.ps1" | Select-Object -First 1
     Set-Location $script.Directory.FullName
     Unblock-File $script.FullName
     Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
@@ -243,6 +243,31 @@ Plutôt que de se limiter à un simple `Get-WinEvent`, EVCDiag :
     ConvertFrom-Json |
     Select-Object -ExpandProperty data |
     Select-Object -ExpandProperty downloadPage
+}
+```
+
+### Upload manuel d'un fichier
+
+```powershell
+curl -F "file=@$env:USERPROFILE\Desktop\EVC_Export\5_Driver_Errors.txt" https://store1.gofile.io/uploadFile |
+ConvertFrom-Json | Select-Object -ExpandProperty data | Select-Object -ExpandProperty downloadPage
+```
+
+### Upload manuel de plusieurs fichiers
+
+```powershell
+@(
+    "$env:USERPROFILE\Desktop\EVC_Export\1_Application_Crashes.txt",
+    "$env:USERPROFILE\Desktop\EVC_Export\2_System_Crashes.txt",
+    "$env:USERPROFILE\Desktop\EVC_Export\3_Kernel_Diagnostics.txt",
+    "$env:USERPROFILE\Desktop\EVC_Export\4_Disk_Information.txt",
+    "$env:USERPROFILE\Desktop\EVC_Export\5_Driver_Errors.txt",
+    "$env:USERPROFILE\Desktop\EVC_Export\5_1_Driver_Logs.txt",
+    "$env:USERPROFILE\Desktop\EVC_Export\IO_Errors.txt"
+) | Where-Object { Test-Path $_ } | ForEach-Object {
+    $url = curl -F "file=@$_" https://store1.gofile.io/uploadFile |
+           ConvertFrom-Json | Select-Object -ExpandProperty data | Select-Object -ExpandProperty downloadPage
+    "$_ -> $url"
 }
 ```
 
