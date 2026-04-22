@@ -246,14 +246,36 @@ Plutôt que de se limiter à un simple `Get-WinEvent`, EVCDiag :
 }
 ```
 
-### Upload manuel d'un fichier
+### Upload manuel d'un fichier Win 10/11
 
 ```powershell
 curl -F "file=@$env:USERPROFILE\Desktop\EVC_Export\5_Driver_Errors.txt" https://store1.gofile.io/uploadFile |
 ConvertFrom-Json | Select-Object -ExpandProperty data | Select-Object -ExpandProperty downloadPage
 ```
+### Upload manuel d'un fichier Win 7
 
-### Upload manuel de plusieurs fichiers
+```powershell
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+$filePath = "$env:USERPROFILE\Desktop\EVC_Export\5_Driver_Errors.txt"
+$url = "https://store1.gofile.io/uploadFile"
+
+Add-Type -AssemblyName System.Net.Http
+
+$client = New-Object System.Net.Http.HttpClient
+$content = New-Object System.Net.Http.MultipartFormDataContent
+
+$fileStream = [System.IO.File]::OpenRead($filePath)
+$fileContent = New-Object System.Net.Http.StreamContent($fileStream)
+
+$content.Add($fileContent, "file", [System.IO.Path]::GetFileName($filePath))
+
+$response = $client.PostAsync($url, $content).Result
+$result = $response.Content.ReadAsStringAsync().Result | ConvertFrom-Json
+
+$result.data.downloadPage
+```
+### Upload manuel de plusieurs fichiers Win 10/11
 
 ```powershell
 @(
@@ -268,6 +290,42 @@ ConvertFrom-Json | Select-Object -ExpandProperty data | Select-Object -ExpandPro
     $url = curl -F "file=@$_" https://store1.gofile.io/uploadFile |
            ConvertFrom-Json | Select-Object -ExpandProperty data | Select-Object -ExpandProperty downloadPage
     "$_ -> $url"
+}
+```
+
+### Upload manuel de plusieurs fichiers Win 7
+
+```powershell
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+Add-Type -AssemblyName System.Net.Http
+
+$client = New-Object System.Net.Http.HttpClient
+
+@(
+    "$env:USERPROFILE\Desktop\EVC_Export\1_Application_Crashes.txt",
+    "$env:USERPROFILE\Desktop\EVC_Export\2_System_Crashes.txt",
+    "$env:USERPROFILE\Desktop\EVC_Export\3_Kernel_Diagnostics.txt",
+    "$env:USERPROFILE\Desktop\EVC_Export\4_Disk_Information.txt",
+    "$env:USERPROFILE\Desktop\EVC_Export\5_Driver_Errors.txt",
+    "$env:USERPROFILE\Desktop\EVC_Export\5_1_Driver_Logs.txt",
+    "$env:USERPROFILE\Desktop\EVC_Export\IO_Errors.txt"
+) | Where-Object { Test-Path $_ } | ForEach-Object {
+
+    $filePath = $_
+    $url = "https://store1.gofile.io/uploadFile"
+
+    $content = New-Object System.Net.Http.MultipartFormDataContent
+    $fileStream = [System.IO.File]::OpenRead($filePath)
+    $fileContent = New-Object System.Net.Http.StreamContent($fileStream)
+
+    $content.Add($fileContent, "file", [System.IO.Path]::GetFileName($filePath))
+
+    $response = $client.PostAsync($url, $content).Result
+    $result = $response.Content.ReadAsStringAsync().Result | ConvertFrom-Json
+
+    $fileStream.Close()
+
+    "$filePath -> $($result.data.downloadPage)"
 }
 ```
 
